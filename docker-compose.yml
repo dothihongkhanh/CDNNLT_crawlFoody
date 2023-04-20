@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  mysql_service:
+    container_name: mysql_service
+    build: ./mysql #dduwong dan cua file docker comose
+    ports:
+      - "6603:3306"
