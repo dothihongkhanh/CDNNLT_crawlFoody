@@ -1,109 +1,21 @@
 import requests
 import json
 import sys
+import  csv
 from fastapi import FastAPI
 app= FastAPI()
-class DELIVERY:
-    def __init__(self, delivery_id, name, phone, address, rating):
-        self.delivery_id = delivery_id
-        self.name = name
-        self.phone = phone
-        self.address=address
-        self.rating = rating
-    def __str__(self):
-        return f"\ndelivery_id: {self.delivery_id}\n name: {self.name}\n phone: {self.phone}\n address: {self.address}\n rating: {self.rating}"
-class dishType:
-    def __init__(self, delivery_id, dish_type_id, dish_type_name):
-        self.delivery_id = delivery_id
-        self.dish_type_id = dish_type_id
-        self.dish_type_name=dish_type_name
-    def __str__(self):
-        return f"\ndelivery_id: {self.delivery_id}\ndish_type_id: {self.dish_type_id}\ndish_type_name: {self.dish_type_name}"
+
 class DISH:
-    def __init__(self, id, name, quantity, dish_type_id):
+    def __init__(self, id, name, price, description, dish_type_name, delivery_id):
         self.id = id
         self.name = name
-        self.quantity = quantity
-        self.dish_type_id = dish_type_id
+        self.price = price
+        self.description = description
+        self.dish_type_name = dish_type_name
+        self.delivery_id = delivery_id
     def __str__(self):
-        return f"\nid: {self.id}\n name: {self.name}\n quantity: {self.quantity} \n dish_type_id: {self.dish_type_id}"
-@app.get("/crawl_deliveries")
-async def crawl_deliveries():
-    # cào id quán ở đa nang
-    url = "https://gappapi.deliverynow.vn/api/delivery/get_browsing_ids"
+        return f"\nid: {self.id}\n name: {self.name}\n price: {self.price}\n description: {self.description}\n dish_type_name: {self.dish_type_name}\n delivery_id: {self.delivery_id}"
 
-    payload = json.dumps({
-    "sort_type": 2,
-    "city_id": 219,
-    "root_category": 1000001,
-    "root_category_ids": [
-        1000001
-    ]
-    })
-    headers = {
-    'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
-    'X-Foody-Client-Version': '1',
-    'X-Foody-Api-Version': '1',
-    'sec-ch-ua-mobile': '?0',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
-    'X-Foody-Client-Type': '1',
-    'X-Foody-App-Type': '1004',
-    'Content-Type': 'application/json',
-    'Accept': 'application/json, text/plain, */*',
-    'X-Foody-Client-Id': '',
-    'sec-ch-ua-platform': '"Windows"',
-    'Sec-Fetch-Site': 'cross-site',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty'
-    }
-    response = requests.request("POST", url, headers=headers, data=payload)
-    # print(response.text)
-    delivery_ids = response.json()['reply']['delivery_ids']
-    # Lấy 5 delivery_id đầu tiên
-    first_five_deliveries = delivery_ids[:5]
-    print(first_five_deliveries)
-
-
-    # cào thông tin cả 5 quán
-    url = "https://gappapi.deliverynow.vn/api/delivery/get_browsing_infos"
-
-    payload = json.dumps({
-    "delivery_ids": first_five_deliveries,
-    "city_id": 219,
-    "sort_type": 2,
-    "root_category": 1000001,
-    "root_category_ids": [
-        1000001
-    ]
-    })
-    headers = {
-    'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
-    'X-Foody-Client-Version': '1',
-    'X-Foody-Api-Version': '1',
-    'sec-ch-ua-mobile': '?0',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
-    'X-Foody-Client-Type': '1',
-    'X-Foody-App-Type': '1004',
-    'Content-Type': 'application/json',
-    'Accept': 'application/json, text/plain, */*',
-    'X-Foody-Client-Id': '',
-    'sec-ch-ua-platform': '"Windows"',
-    'Sec-Fetch-Site': 'cross-site',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty'
-    }
-    response = requests.request("POST", url, headers=headers, data=payload)
-    delivery_infos = response.json()['reply']['delivery_infos']
-    delivery_informations=[]
-    for delivery_info in delivery_infos:
-        delivery_id = delivery_info["id"]
-        name = delivery_info["name"]
-        phone = delivery_info["phones"]
-        address = delivery_info["address"]
-        rating = delivery_info["rating"]["avg"]
-        delivery = DELIVERY( delivery_id= delivery_id, name = name, phone = phone, address = address, rating = rating)
-        delivery_informations.append(delivery)
-    return {"message": "Data crawled and saved successfully", "data": delivery_informations}
 
 @app.get("/crawl_dishes")
 async def crawl_dishes():
@@ -137,7 +49,7 @@ async def crawl_dishes():
     response = requests.request("POST", url, headers=headers, data=payload)
     # print(response.text)
     delivery_ids = response.json()['reply']['delivery_ids']
-    # Lấy 2 delivery đầu tiên
+    # Lấy 5 delivery đầu tiên
     first_five_deliveries = delivery_ids[:5]
     print(first_five_deliveries)
     # Lấy  menu quán 
@@ -167,25 +79,32 @@ async def crawl_dishes():
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Dest': 'empty'
         }
-
         response = requests.request("GET", url, headers=headers, data=payload)
-        
+        # xóa dữ liệu cũ trong  file csv
+        with open ('dishes.csv',mode ='w', encoding='utf-8', newline ='') as file:
+            writer = csv.writer(file)
         # Truy cập vào menu_infos
         menu_infos = response.json()['reply']['menu_infos']
         for menu_info in  menu_infos:
-            maloaimon = menu_info["dish_type_id"]
-            tenloaimon = menu_info["dish_type_name"]
+            dish_type_name = menu_info["dish_type_name"]
             dishes = menu_info["dishes"]
             for dish in dishes:
                 id = dish["id"]
                 name = dish["name"]
-                quantity = dish["quantity"]
-                dish = DISH(id = id, name = name, quantity = quantity, dish_type_id = maloaimon)
+                price = dish["price"]["text"]
+                description=dish["description"]
+                dishh = [id, name, price, description, dish_type_name, delivery_id ]
+                # chèn dữ liệu vào csv
+                with open ('dishes.csv',mode ='a', encoding='utf-8', newline ='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(dishh)
+                dish = DISH(id = id, name = name ,price = price, description = description, dish_type_name = dish_type_name, delivery_id = delivery_id)
                 dishess.append(dish)
-            dish_type = dishType(delivery_id= delivery_id, dish_type_id = maloaimon,dish_type_name = tenloaimon )
-            dish_types.append(dish_type)
             # print(dish_type)
     return {"message": "Data crawled and saved successfully", "data": dishess}
+
+
+
 
 # # Connect to MySQL database
 # mydb = mysql.connector.connect(

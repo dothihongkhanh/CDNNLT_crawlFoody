@@ -96,6 +96,11 @@ async def crawl_deliveries():
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Dest': 'empty'
     }
+
+    # POST – Create: Tạo dữ liệu mới
+    # GET – Read: Lấy dữ liệu về
+    # PUT – Update: Cập nhật dữ liệu
+    # DELETE – Delete: Xóa dữ liệu
     response = requests.request("POST", url, headers=headers, data=payload)
     delivery_infos = response.json()['reply']['delivery_infos']
     delivery_informations=[]
