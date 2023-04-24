@@ -3,6 +3,8 @@ import json
 import sys
 import  csv
 from fastapi import FastAPI
+import mysql.connector
+import os
 app= FastAPI()
 
 class DISH:
@@ -55,6 +57,9 @@ async def crawl_dishes():
     # Lấy  menu quán 
     dish_types = []
     dishess= []
+    # xóa dữ liệu cũ trong  file csv
+    with open ('dishes.csv',mode ='w', encoding='utf-8', newline ='') as file:
+        writer = csv.writer(file)
     for delivery_id in first_five_deliveries:
         url = "https://gappapi.deliverynow.vn/api/dish/get_delivery_dishes?id_type=2&request_id=133203"
 
@@ -80,9 +85,7 @@ async def crawl_dishes():
         'Sec-Fetch-Dest': 'empty'
         }
         response = requests.request("GET", url, headers=headers, data=payload)
-        # xóa dữ liệu cũ trong  file csv
-        with open ('dishes.csv',mode ='w', encoding='utf-8', newline ='') as file:
-            writer = csv.writer(file)
+       
         # Truy cập vào menu_infos
         menu_infos = response.json()['reply']['menu_infos']
         for menu_info in  menu_infos:
@@ -103,31 +106,47 @@ async def crawl_dishes():
             # print(dish_type)
     return {"message": "Data crawled and saved successfully", "data": dishess}
 
+#delete---------------------------
+@app.post("/add_dish/")
+def add_dish(id: str, name: str, price: str, description: str, dish_type_name: str, delivery_id: str):
+    conn = mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password="psw123",
+        port='6603',
+        database="foody_db"
+    )
+    sql = "INSERT INTO Dishes (dish_id,dish_name,price,d_description,dish_type_name,delivery_id) VALUES (%s,%s,%s,%s,%s,%s)"
+    mycursor = conn.cursor()
+    temp = (id,name,price,description,dish_type_name,delivery_id)
+    try:
+        mycursor.execute(sql,temp)
+        conn.commit()
+        result = 'Inserted successful!'
+    except:
+        result = 'Inserted fail!'  
+    mycursor.close()
+    conn.close()
+    return {"result":result}
 
 
-
-# # Connect to MySQL database
-# mydb = mysql.connector.connect(
-#     host="127.0.0.1",
-#     user="root",
-#     password="thuluyen",
-#     database="foody_db"
-# )
-# mycursor = mydb.cursor()
-
-# # Insert data into MySQL database
-# for place in response.json()["Data"]["Place"]["Location"]:
-#     name = place["Name"]
-#     address = place["Address"]
-#     phone = place["Phone"]
-#     category = place["CategoryName"]
-#     rating = place["AvgRating"]
-#     num_reviews = place["TotalReview"]
-#     sql = "INSERT INTO places (name, address, phone, category, rating, num_reviews) VALUES (%s, %s, %s, %s, %s, %s)"
-#     val = (name, address, phone, category, rating, num_reviews)
-#     mycursor.execute(sql, val)
-# mydb.commit()
-
-# # Close MySQL connection
-# mycursor.close()
-# mydb.close()
+@app.delete("/delete_dish/}")
+def delete_dish(id: str):
+    conn = mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password="psw123",
+        port='6603',
+        database="foody_db"
+    )
+    sql = "DELETE FROM Dishes WHERE dish_id = %s"
+    mycursor = conn.cursor()
+    try:
+        mycursor.execute(sql,id)
+        conn.commit()
+        result = 'Inserted successful!'
+    except:
+        result = 'Inserted fail!'  
+    mycursor.close()
+    conn.close()
+    return {"result":result}
